@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# pyenv
+.python-version
+
+# Virtual environments
+venv/
+.env/
+env/
+ENV/
+.venv/
+
+# pipenv
+Pipfile.lock
+
+# Poetry
+poetry.lock
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# Other editors
+*.sublime-workspace
+*.sublime-project
+
+# Test/coverage
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+
+# System
+Thumbs.db
+Desktop.ini 
