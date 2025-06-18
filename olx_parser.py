@@ -221,13 +221,17 @@ class InteractiveOLXParser:
         if self.verbose:
             print(f"🎓 Course: {course_name}")
         
+        with open(course_file, 'r', encoding='utf-8') as f:
+            course_xml_string = f.read()
+        
         # Build course structure recursively
         structure = {
             'type': 'course',
             'display_name': course_name,
             'url_name': course_url_name,
+            'xml_string': course_xml_string,
             'children': []
-        }
+}
         
         # Process course children - handle different OLX formats
         for child in course_root:
@@ -894,18 +898,16 @@ class InteractiveOLXParser:
         xml_block_id = f"xmlblock_{uuid.uuid4().hex}"
         
         # Determine if children should be collapsed or expanded by default
-        if level == 0:
-            if children:
+        if children:
+            if level == 0 or level == 1:
                 toggle_html = '<span class="tree-toggle" onclick="toggleNode(this)">[-]</span>'
+                children_collapsed = False
             else:
-                toggle_html = ''
-            children_collapsed = False
-        elif level == 1:
-            toggle_html = '<span class="tree-toggle" onclick="toggleNode(this)">[-]</span>'
-            children_collapsed = False
+                toggle_html = '<span class="tree-toggle" onclick="toggleNode(this)">[+]</span>'
+                children_collapsed = True
         else:
-            toggle_html = '<span class="tree-toggle" onclick="toggleNode(this)">[+]</span>'
-            children_collapsed = True
+            toggle_html = '<span class="tree-toggle" onclick="alert(\'No children\')">[o]</span>'
+            children_collapsed = False
         
         # Escape XML for HTML display
         import html
