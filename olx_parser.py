@@ -64,8 +64,7 @@ class InteractiveOLXParser:
         
         try:
             with tarfile.open(tar_path, 'r:gz') as tar_ref:
-                # Extract all files
-                tar_ref.extractall(self.temp_dir)
+                tar_ref.extractall(self.temp_dir, filter=tarfile.data_filter)
             
             if self.verbose:
                 print(f"   📁 Extracted to: {self.temp_dir}")
@@ -140,26 +139,43 @@ class InteractiveOLXParser:
         """Get component information including display name and children"""
         file_path = self.olx_dir / component_type / f"{url_name}.xml"
         
+        if self.verbose:
+            print(f"[DEBUG get_component_info] file_path: {file_path}")
         if not file_path.exists():
             if self.verbose:
                 print(f"File not found: {file_path}")
             return f"Missing {component_type}", url_name, []
         
         root = self.parse_xml_file(file_path)
+        if self.verbose:
+            print(f"[DEBUG get_component_info] root tag: {root.tag if root is not None else None}")
         if root is None:
             return f"Invalid {component_type}", url_name, []
         
         # Get display name
         display_name = root.get('display_name', url_name)
+        if self.verbose:
+            print(f"[DEBUG get_component_info] display_name: {display_name}")
+            print(f"[DEBUG get_component_info] url_name: {url_name}")
         
         # Get children references - handle different attribute names
-        children = []
+        children_refs = []
         for child in root:
             url_name_attr = child.get('url_name') or child.get('url_name_ref')
+            filename_attr = child.get('filename')
             if url_name_attr:
-                children.append((child.tag, url_name_attr))
-        
-        return display_name, url_name, children
+                children_refs.append((child.tag, url_name_attr))
+            elif filename_attr:
+                # Inline file-based component (e.g., <html filename="..."/>)
+                xml_string = ET.tostring(child, encoding='unicode')
+                children_refs.append({
+                    'type': child.tag,
+                    'display_name': child.get('display_name', f'Inline {child.tag}'),
+                    'url_name': filename_attr,
+                    'xml_string': xml_string,
+                    'children': []
+                })
+        return display_name, url_name, children_refs
     
     def find_course_file(self) -> Tuple[Path, str]:
         """Find the root course.xml file and get the course url_name"""
@@ -257,23 +273,27 @@ class InteractiveOLXParser:
             indent = "  " * level
             print(f"{indent}🔍 Following: {component_type}/{url_name}")
         
-        display_name, actual_url_name, children = self.get_component_info(component_type, url_name)
+        display_name, actual_url_name, children_refs = self.get_component_info(component_type, url_name)
         
         # Get XML structure as string
         file_path = self.olx_dir / component_type / f"{url_name}.xml"
         xml_string = ''
+        root = None
         if file_path.exists():
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     xml_string = f.read()
+                # Parse XML for inline children
+                root = ET.fromstring(xml_string)
             except Exception:
                 xml_string = ''
+                root = None
         
         if self.verbose:
             indent = "  " * level
             print(f"{indent}   📋 Parsing: {display_name}")
-            if children:
-                print(f"{indent}   ✅ Found {len(children)} child components")
+            if children_refs:
+                print(f"{indent}   ✅ Found {len(children_refs)} child components")
         
         component_structure = {
             'type': component_type,
@@ -283,8 +303,65 @@ class InteractiveOLXParser:
             'children': []
         }
         
-        # Process children recursively
-        for child_type, child_url_name in children:
+        # Only process children if root is not None
+        if root is not None:
+            children_refs = []
+            inline_children = []
+            for child in root:
+                url_name_attr = child.get('url_name') or child.get('url_name_ref')
+                filename_attr = child.get('filename')
+                if child.tag == 'html' and url_name_attr:
+                    html_file_path = self.olx_dir / 'html' / f'{url_name_attr}.xml'
+                    if html_file_path.exists():
+                        html_root = self.parse_xml_file(html_file_path)
+                        display_name_html = html_root.get('display_name', url_name_attr)
+                        html_filename_attr = html_root.get('filename')
+                        xml_str = ET.tostring(html_root, encoding='unicode')
+                        html_olx_node = {
+                            'type': child.tag,
+                            'display_name': display_name_html,
+                            'url_name': url_name_attr,
+                            'xml_string': xml_str,
+                            'children': []
+                        }
+                        # Only add the html_file child node if filename is present
+                        if html_filename_attr:
+                            html_filename = html_filename_attr
+                            if not html_filename.endswith('.html'):
+                                html_filename += '.html'
+                            html_file_content_path = self.olx_dir / 'html' / html_filename
+                            if html_file_content_path.exists():
+                                with open(html_file_content_path, 'r', encoding='utf-8') as f:
+                                    html_content = f.read()
+                            else:
+                                html_content = f'[HTML file not found: {html_filename}]'
+                            html_file_node = {
+                                'type': 'html_file',
+                                'display_name': html_filename,
+                                'url_name': html_filename,
+                                'xml_string': html_content,
+                                'children': []
+                            }
+                            html_olx_node['children'].append(html_file_node)
+                        inline_children.append(html_olx_node)
+                    else:
+                        children_refs.append((child.tag, url_name_attr))
+                elif url_name_attr:
+                    children_refs.append((child.tag, url_name_attr))
+                elif filename_attr:
+                    # For other tags with filename, show the XML string
+                    xml_inline = ET.tostring(child, encoding='unicode')
+                    inline_children.append({
+                        'type': child.tag,
+                        'display_name': child.get('display_name', f'Inline {child.tag}'),
+                        'url_name': filename_attr,
+                        'xml_string': xml_inline,
+                        'children': []
+                    })
+            component_structure['children'].extend(inline_children)
+        
+        # Process children recursively (url_name/url_name_ref)
+        for child_type, child_url_name in children_refs:
             child_structure = self.parse_component_recursive(
                 child_type, child_url_name, level + 1
             )
@@ -321,7 +398,7 @@ class InteractiveOLXParser:
         # Get component counts
         counts = self.count_components(structure)
         
-        html_template = """
+        html_template = r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
