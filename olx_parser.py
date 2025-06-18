@@ -546,9 +546,15 @@ class InteractiveOLXParser:
                 searchTimeout = setTimeout(() => performSearch(this.value.trim()), 300);
             });
             
+            collapseAll()
             // Initialize with first level expanded
-            const firstLevelChildren = document.querySelectorAll('.tree > .tree-node > .tree-children');
-            firstLevelChildren.forEach(child => child.classList.remove('collapsed'));
+            const firstLevelToggles = document.querySelectorAll('.tree > .tree-node > .tree-toggle');
+            firstLevelToggles.forEach(toggle => {
+                // Only expand if this node actually has children
+                if (toggle.parentElement.querySelector('.tree-children')) {
+                    toggleNode(toggle);
+                }
+            });
         });
         
         function performSearch(query) {
@@ -604,6 +610,20 @@ class InteractiveOLXParser:
                         }
                         parent = parent.parentElement;
                     }
+
+                    // Also make all children visible
+                    function addChildrenToVisible(n) {
+                        const childrenContainer = n.querySelector('.tree-children');
+                        if (childrenContainer) {
+                            Array.from(childrenContainer.children).forEach(child => {
+                                if (child.classList && child.classList.contains('tree-node')) {
+                                    visibleNodes.add(child);
+                                    addChildrenToVisible(child);
+                                }
+                            });
+                        }
+                    }
+                    addChildrenToVisible(node);
                 }
             });
             
