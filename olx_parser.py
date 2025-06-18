@@ -252,12 +252,22 @@ class InteractiveOLXParser:
         return structure
     
     def parse_component_recursive(self, component_type: str, url_name: str, level: int = 0) -> Optional[Dict]:
-        """Recursively parse a component and its children"""
+        """Recursively parse a component and its children, and include its XML structure as a string"""
         if self.verbose:
             indent = "  " * level
             print(f"{indent}🔍 Following: {component_type}/{url_name}")
         
         display_name, actual_url_name, children = self.get_component_info(component_type, url_name)
+        
+        # Get XML structure as string
+        file_path = self.olx_dir / component_type / f"{url_name}.xml"
+        xml_string = ''
+        if file_path.exists():
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    xml_string = f.read()
+            except Exception:
+                xml_string = ''
         
         if self.verbose:
             indent = "  " * level
@@ -269,6 +279,7 @@ class InteractiveOLXParser:
             'type': component_type,
             'display_name': display_name,
             'url_name': actual_url_name,
+            'xml_string': xml_string,
             'children': []
         }
         
@@ -494,6 +505,19 @@ class InteractiveOLXParser:
         }
         .clear-search:hover {
             background: #c82333;
+        }
+        .xml-toggle {
+            cursor: pointer;
+            user-select: none;
+            display: inline-block;
+            width: auto;
+            text-align: center;
+            color: #666;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .xml-toggle:hover, .xml-toggle:focus {
+            color: #007bff;
         }
     </style>
 </head>
@@ -731,6 +755,19 @@ class InteractiveOLXParser:
                 }
             });
         }
+
+        // Add this JS function for XML toggle
+        function toggleXml(xmlId, btn) {
+            const xmlBlock = document.getElementById(xmlId);
+            if (!xmlBlock) return;
+            if (xmlBlock.style.display === 'none') {
+                xmlBlock.style.display = 'block';
+                btn.textContent = '[hide xml]';
+            } else {
+                xmlBlock.style.display = 'none';
+                btn.textContent = '[show xml]';
+            }
+        }
     </script>
 </body>
 </html>
@@ -764,8 +801,8 @@ class InteractiveOLXParser:
         print(f"✅ Interactive HTML with search generated: {output_file}")
         print(f"   Open this file in your web browser to view the searchable expandable tree!")
     
-    def generate_tree_html(self, node, is_root=True):
-        """Generate HTML for tree structure"""
+    def generate_tree_html(self, node, is_root=True, level=0, node_id_prefix=''):
+        """Generate HTML for tree structure, including collapsible XML string as a sibling to component-url"""
         icon_map = {
             'course': '🎓', 'chapter': '📚', 'sequential': '📄', 
             'vertical': '📝', 'problem': '❓', 'video': '🎥', 
@@ -775,30 +812,53 @@ class InteractiveOLXParser:
         icon = icon_map.get(node['type'], '📦')
         children = node.get('children', [])
         
-        # Create toggle button if there are children
-        toggle_html = ""
-        if children:
+        # Unique id for XML block
+        import uuid
+        xml_block_id = f"xmlblock_{uuid.uuid4().hex}"
+        
+        # Determine if children should be collapsed or expanded by default
+        if level == 0:
+            if children:
+                toggle_html = '<span class="tree-toggle" onclick="toggleNode(this)">[-]</span>'
+            else:
+                toggle_html = ''
+            children_collapsed = False
+        elif level == 1:
             toggle_html = '<span class="tree-toggle" onclick="toggleNode(this)">[-]</span>'
+            children_collapsed = False
         else:
-            toggle_html = '<span class="tree-toggle"></span>'
+            toggle_html = '<span class="tree-toggle" onclick="toggleNode(this)">[+]</span>'
+            children_collapsed = True
+        
+        # Escape XML for HTML display
+        import html
+        xml_string_escaped = html.escape(node.get('xml_string', ''))
+        
+        # Show XML toggle as a span, not a button
+        show_xml_btn = f'<span class="xml-toggle" onclick="toggleXml(\'{xml_block_id}\', this)">[show xml]</span>'
         
         # Create the node content
         content_html = f'''
         <div class="tree-node">
-            {toggle_html}
+            {toggle_html}{show_xml_btn}
             <span class="tree-content">
                 {icon} 
                 <span class="component-type">[{node['type']}]</span> 
                 <span class="component-name">{node['display_name']}</span> 
                 <span class="component-url">({node['url_name']})</span>
             </span>
+            <span class="component-xml" id="{xml_block_id}" style="display:none; margin-top:4px;">
+                <pre style="white-space:pre-wrap; background:#f8f8f8; border:1px solid #ccc; padding:6px; border-radius:4px;">{xml_string_escaped}</pre>
+            </span>
         '''
         
-        # Add children if they exist
         if children:
-            content_html += '<div class="tree-children collapsed">'
+            children_class = 'tree-children'
+            if children_collapsed:
+                children_class += ' collapsed'
+            content_html += f'<div class="{children_class}">'
             for child in children:
-                content_html += self.generate_tree_html(child, False)
+                content_html += self.generate_tree_html(child, False, level+1)
             content_html += '</div>'
         
         content_html += '</div>'
