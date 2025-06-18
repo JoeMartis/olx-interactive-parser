@@ -692,12 +692,27 @@ class InteractiveOLXParser:
                 const nameElement = content.querySelector('.component-name');
                 const typeElement = content.querySelector('.component-type');
                 const urlElement = content.querySelector('.component-url');
+                const xmlElement = node.querySelector('.component-xml pre');
                 
                 const name = nameElement ? nameElement.textContent.toLowerCase() : '';
                 const type = typeElement ? typeElement.textContent.toLowerCase() : '';
                 const url = urlElement ? urlElement.textContent.toLowerCase() : '';
+                const xml = xmlElement ? xmlElement.textContent.toLowerCase() : '';
                 
-                if (name.includes(lowerQuery) || type.includes(lowerQuery) || url.includes(lowerQuery)) {
+                // Always reset XML display state
+                const xmlBlock = node.querySelector('.component-xml');
+                const xmlSearchBlock = node.querySelector('.component-xml-search');
+                const xmlToggle = node.querySelector('.xml-toggle');
+
+                if (xmlBlock) xmlBlock.style.display = 'none';
+                if (xmlSearchBlock) {
+                    xmlSearchBlock.style.display = 'none';
+                    xmlSearchBlock.innerHTML = '';
+                }
+                if (xmlToggle) xmlToggle.textContent = '[show xml]';
+
+                // Now do the match logic
+                if (name.includes(lowerQuery) || type.includes(lowerQuery) || url.includes(lowerQuery) || xml.includes(lowerQuery)) {
                     matchCount++;
                     node.classList.add('search-highlight');
                     visibleNodes.add(node);
@@ -706,6 +721,19 @@ class InteractiveOLXParser:
                     highlightText(nameElement, lowerQuery);
                     highlightText(typeElement, lowerQuery);
                     highlightText(urlElement, lowerQuery);
+
+                    if (xmlBlock && xmlSearchBlock && xmlToggle && xml.includes(lowerQuery)) {
+                        // Show and highlight XML
+                        const xmlHtml = xmlBlock.innerHTML;
+                        const preStart = xmlHtml.indexOf('>') + 1;
+                        const preEnd = xmlHtml.lastIndexOf('</pre>');
+                        let xmlText = xmlHtml.substring(preStart, preEnd);
+                        xmlText = highlightXmlTextPreservingEntities(xmlText, lowerQuery);
+                        xmlBlock.style.display = 'none';
+                        xmlSearchBlock.innerHTML = `<pre style="white-space:pre-wrap; background:#f8f8f8; border:1px solid #ccc; padding:6px; border-radius:4px;">${xmlText}</pre>`;
+                        xmlSearchBlock.style.display = 'block';
+                        xmlToggle.textContent = '[hide xml]';
+                    }
                     
                     // Make sure all parents are visible
                     let parent = node.parentElement;
@@ -788,6 +816,14 @@ class InteractiveOLXParser:
                 if (content) {
                     content.innerHTML = content.innerHTML.replace(/<span class="search-match">(.*?)<\/span>/g, '$1');
                 }
+                // Hide search XML and show original
+                const xmlBlock = node.querySelector('.component-xml');
+                const xmlSearchBlock = node.querySelector('.component-xml-search');
+                if (xmlBlock && xmlSearchBlock) {
+                    xmlBlock.style.display = '';
+                    xmlSearchBlock.style.display = 'none';
+                    xmlSearchBlock.innerHTML = '';
+                }
             });
             
             // Reset to default collapsed state
@@ -840,14 +876,45 @@ class InteractiveOLXParser:
         // Add this JS function for XML toggle
         function toggleXml(xmlId, btn) {
             const xmlBlock = document.getElementById(xmlId);
-            if (!xmlBlock) return;
-            if (xmlBlock.style.display === 'none') {
-                xmlBlock.style.display = 'block';
-                btn.textContent = '[hide xml]';
+            // Find the .component-xml-search sibling
+            const xmlSearchBlock = xmlBlock?.parentElement.querySelector('.component-xml-search');
+            // If the search block is visible, that's the one to toggle
+            const isSearchVisible = xmlSearchBlock && xmlSearchBlock.style.display !== 'none' && xmlSearchBlock.innerHTML.trim() !== '';
+
+            if (isSearchVisible) {
+                // Toggle the search-highlighted XML
+                if (xmlSearchBlock.style.display === 'none') {
+                    xmlSearchBlock.style.display = 'block';
+                    btn.textContent = '[hide xml]';
+                } else {
+                    xmlSearchBlock.style.display = 'none';
+                    btn.textContent = '[show xml]';
+                }
+                // Always hide the original when search is active
+                if (xmlBlock) xmlBlock.style.display = 'none';
             } else {
-                xmlBlock.style.display = 'none';
-                btn.textContent = '[show xml]';
+                // Toggle the original XML
+                if (xmlBlock.style.display === 'none') {
+                    xmlBlock.style.display = 'block';
+                    btn.textContent = '[hide xml]';
+                } else {
+                    xmlBlock.style.display = 'none';
+                    btn.textContent = '[show xml]';
+                }
+                // Always hide the search block when not in search mode
+                if (xmlSearchBlock) xmlSearchBlock.style.display = 'none';
             }
+        }
+
+        function highlightXmlTextPreservingEntities(xmlText, lowerQuery) {
+            // Split on HTML entities (&...;)
+            return xmlText.replace(/(&[^;]+;)|([^&]+)/g, (match, entity, text) => {
+                if (entity) return entity; // Don't highlight inside entities
+                if (!text) return '';
+                // Highlight in the non-entity text
+                const regex = new RegExp(lowerQuery.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'), 'gi');
+                return text.replace(regex, m => `<span class="search-match">${m}</span>`);
+            });
         }
     </script>
 </body>
@@ -929,6 +996,7 @@ class InteractiveOLXParser:
             <span class="component-xml" id="{xml_block_id}" style="display:none; margin-top:4px;">
                 <pre style="white-space:pre-wrap; background:#f8f8f8; border:1px solid #ccc; padding:6px; border-radius:4px;">{xml_string_escaped}</pre>
             </span>
+            <span class="component-xml-search" style="display:none; margin-top:4px;"></span>
         '''
         
         if children:
