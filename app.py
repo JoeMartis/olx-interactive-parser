@@ -1,14 +1,15 @@
-from flask import Flask, request, send_file, redirect, url_for
+from flask import Flask, request, send_from_directory
 import os
 import tempfile
 from olx_parser import InteractiveOLXParser
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 UPLOAD_FOLDER = tempfile.gettempdir()
 
 @app.route('/')
 def index():
-    return send_file('index.html')
+    # Serve index.html from static/html/
+    return send_from_directory('static/html', 'index.html')
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -27,7 +28,7 @@ def upload():
         parser.generate_interactive_html(structure, output_html)
 
     # Serve the generated HTML
-    return send_file(output_html)
+    return send_from_directory(os.path.dirname(output_html), os.path.basename(output_html))
 
 if __name__ == '__main__':
     app.run(debug=True) 
