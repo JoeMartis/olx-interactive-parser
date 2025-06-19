@@ -4,10 +4,6 @@
 
 The Interactive OLX Parser is a powerful Python tool that transforms edX OLX (Open Learning XML) course structures into beautiful, searchable, interactive HTML visualizations. Whether you're working with course directories, zip files, or compressed archives, this tool makes it easy to explore and understand complex course hierarchies.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.6+-blue.svg)
-![Platform](https://img.shields.io/badge/platform-cross--platform-green.svg)
-
 ## 🚀 Quick Start
 
 ### Installation Requirements
