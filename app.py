@@ -1,10 +1,11 @@
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, abort, redirect, url_for
 import os
 import tempfile
 from olx_parser import InteractiveOLXParser
 
 app = Flask(__name__, static_folder='static')
 UPLOAD_FOLDER = tempfile.gettempdir()
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
 @app.route('/')
 def index():
@@ -29,6 +30,20 @@ def upload():
 
     # Serve the generated HTML
     return send_from_directory(os.path.dirname(output_html), os.path.basename(output_html))
+
+@app.errorhandler(413)
+def too_large(e):
+    return "File is too large (max 5MB).", 413
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    # Redirect to home page for Method Not Allowed
+    return redirect(url_for('index'))
+
+@app.errorhandler(404)
+def page_not_found(e):
+    # Redirect to home page for Not Found
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True) 

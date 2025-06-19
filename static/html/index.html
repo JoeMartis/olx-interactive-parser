@@ -16,10 +16,26 @@
 <body>
     <div class="container">
         <h1>OLX Interactive Parser</h1>
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="olxfile" required>
-            <button type="submit">Upload and Parse</button>
-        </form>
+        <p style="color:#b94a48; font-weight:bold; margin-top:1em;">
+            🚨 Please only upload files smaller than <strong>5MB</strong>. This is a free tool, not a data warehouse—giant files will eat up all my (very limited) resources!<br>
+            <em>Your OLX export really shouldn't be that big. If it is, you probably left a bunch of stuff in your <code>/static/</code> folder (images, videos, memes, cat gifs, etc). Just delete that junk and recompress. Your future self (and this server) will thank you!</em>
+        </p>
+        <form id="uploadForm" method="post" enctype="multipart/form-data" action="/upload">
+            <input type="file" id="olxfile" name="olxfile" required>
+            <button type="submit">Upload</button>
+          </form>
+          <script>
+          document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('olxfile');
+            if (fileInput.files.length > 0) {
+              const file = fileInput.files[0];
+              if (file.size > 5 * 1024 * 1024) { // 5MB in bytes
+                alert("Too big! 5MB max. If your OLX is larger, you're probably hoarding cat videos.");
+                e.preventDefault();
+              }
+            }
+          });
+          </script>
     </div>
 </body>
 </html> 

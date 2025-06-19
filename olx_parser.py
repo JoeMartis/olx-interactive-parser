@@ -607,6 +607,7 @@ class InteractiveOLXParser:
         <div class="header">
             <h1>📋 {course_title}</h1>
             <p>Search through components or click on [+] and [-] to expand/collapse sections</p>
+            <p><a href="/">Upload another file</a></p>
         </div>
         
         <div class="search-container">
