@@ -14,6 +14,7 @@ import tempfile
 import shutil
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
+from bs4 import BeautifulSoup
 
 class InteractiveOLXParser:
     def __init__(self, olx_path: str, verbose: bool = False):
@@ -387,8 +388,406 @@ class InteractiveOLXParser:
         
         return counts
     
-    def generate_interactive_html(self, structure: Dict, output_file: str = None):
-        """Generate an interactive HTML file with expandable/collapsible tree and search"""
+    def extract_problem_data(self) -> List[Dict]:
+        """Extract problem and interactive component information from OLX structure
+        
+        Detects and extracts:
+        - Problems (Multiple Choice, Checkboxes, Dropdown, Numerical, Formula, Custom Response, etc.)
+        - Open Response Assessments (ORA)
+        - Word Clouds
+        - IFrames
+        - Other interactive components
+        """
+        problem_list_data = {}
+        video_list_data = {}
+        
+        v_folderpath = self.olx_dir / 'vertical'
+        s_folderpath = self.olx_dir / 'sequential'
+        p_folderpath = self.olx_dir / 'problem'
+        ora_folderpath = self.olx_dir / 'openassessment'
+        word_cloud_folderpath = self.olx_dir / 'word_cloud'
+        c_folderpath = self.olx_dir / 'chapter'
+        
+        # Skip if required folders don't exist
+        if not v_folderpath.exists():
+            return []
+        
+        if self.verbose:
+            print('📝 Extracting problem and interactive component information...')
+        
+        # Step 1: Locate problems, ORA, word clouds, iframes, and videos within verticals
+        if self.verbose:
+            print('   🔍 Locating problems, assessments, word clouds, iframes, and videos within verticals...')
+        for file in v_folderpath.iterdir():
+            if file.suffix == '.xml':
+                vertical_url_name = file.stem
+                
+                # Try reading with different encodings
+                data = None
+                for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                    try:
+                        with open(file, 'r', encoding=encoding) as f:
+                            data = f.read()
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                
+                if data is None:
+                    if self.verbose:
+                        print(f"   ⚠️  Could not decode {file.name}, skipping...")
+                    continue
+                
+                xml_data = BeautifulSoup(data, 'xml')
+                
+                # Check for problem
+                if xml_data.find('problem') is not None:
+                    problem_name = xml_data.find('vertical').get('display_name', 'Unknown')
+                    problem_url_name = xml_data.find('problem').get('url_name')
+                    
+                    problem_link = f'+type@vertical+block@{problem_url_name}'
+                    
+                    problem_list_data[problem_url_name] = {
+                        'vertical': vertical_url_name,
+                        'name': problem_name,
+                        'link': problem_link,
+                        'question type': 'Problem'  # Default, will be updated later
+                    }
+                
+                # Check for openassessment (ORA)
+                elif xml_data.find('openassessment') is not None:
+                    ora_element = xml_data.find('openassessment')
+                    ora_name = xml_data.find('vertical').get('display_name', 'Unknown')
+                    ora_url_name = ora_element.get('url_name')
+                    
+                    # Handle both inline and referenced ORA
+                    if ora_url_name:
+                        ora_link = f'+type@vertical+block@{ora_url_name}'
+                        
+                        problem_list_data[ora_url_name] = {
+                            'vertical': vertical_url_name,
+                            'name': ora_name,
+                            'link': ora_link,
+                            'question type': 'Open Response Assessment'
+                        }
+                    else:
+                        # If no url_name, it might be inline - use vertical name
+                        ora_link = f'+type@vertical+block@{vertical_url_name}'
+                        problem_list_data[vertical_url_name + '_ora'] = {
+                            'vertical': vertical_url_name,
+                            'name': ora_name,
+                            'link': ora_link,
+                            'question type': 'Open Response Assessment (inline)'
+                        }
+                
+                # Check for word_cloud
+                elif xml_data.find('word_cloud') is not None:
+                    wc_element = xml_data.find('word_cloud')
+                    wc_name = xml_data.find('vertical').get('display_name', 'Unknown')
+                    wc_url_name = wc_element.get('url_name')
+                    
+                    if wc_url_name:
+                        wc_link = f'+type@vertical+block@{wc_url_name}'
+                        
+                        problem_list_data[wc_url_name] = {
+                            'vertical': vertical_url_name,
+                            'name': wc_name,
+                            'link': wc_link,
+                            'question type': 'Word Cloud'
+                        }
+                
+                # Check for iframe
+                elif xml_data.find('iframe') is not None:
+                    iframe_element = xml_data.find('iframe')
+                    iframe_name = xml_data.find('vertical').get('display_name', 'Unknown')
+                    iframe_url_name = iframe_element.get('url_name')
+                    
+                    if iframe_url_name:
+                        iframe_link = f'+type@vertical+block@{iframe_url_name}'
+                        
+                        problem_list_data[iframe_url_name] = {
+                            'vertical': vertical_url_name,
+                            'name': iframe_name,
+                            'link': iframe_link,
+                            'question type': 'IFrame'
+                        }
+                
+                # Check for video
+                elif xml_data.find('video') is not None:
+                    video_name = xml_data.find('vertical').get('display_name', 'Unknown')
+                    video_url_name = xml_data.find('video').get('url_name')
+                    
+                    video_list_data[video_url_name] = {
+                        'vertical': vertical_url_name,
+                        'name': video_name
+                    }
+        
+        # Step 2: Locate sequential information
+        if s_folderpath.exists() and self.verbose:
+            print('   🔍 Locating sequential information...')
+        if s_folderpath.exists():
+            for file in s_folderpath.iterdir():
+                if file.suffix == '.xml':
+                    sequential_url_name = file.stem
+                    
+                    # Try reading with different encodings
+                    data = None
+                    for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                        try:
+                            with open(file, 'r', encoding=encoding) as f:
+                                data = f.read()
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    
+                    if data is None:
+                        if self.verbose:
+                            print(f"   ⚠️  Could not decode {file.name}, skipping...")
+                        continue
+                    
+                    xml_data = BeautifulSoup(data, 'xml')
+                    
+                    verticals = xml_data.find_all('vertical')
+                    
+                    relevant_video = None
+                    for vertical in verticals:
+                        vertical_url_name = vertical.get('url_name')
+                        
+                        for video in video_list_data.keys():
+                            if vertical_url_name == video_list_data[video]['vertical']:
+                                relevant_video = video_list_data[video]['name']
+                        
+                        for problem in problem_list_data.keys():
+                            if vertical_url_name == problem_list_data[problem]['vertical']:
+                                problem_list_data[problem]['problem type'] = xml_data.find('sequential').get('format', 'Unknown')
+                                problem_list_data[problem]['section'] = xml_data.find('sequential').get('display_name', 'Unknown')
+                                problem_list_data[problem]['sequential'] = sequential_url_name
+                                
+                                if relevant_video is not None:
+                                    problem_list_data[problem]['video'] = relevant_video
+        
+        # Step 3: Locate problem type information
+        if p_folderpath.exists() and self.verbose:
+            print('   🔍 Locating problem type information...')
+        if p_folderpath.exists():
+            for file in p_folderpath.iterdir():
+                if file.suffix == '.xml':
+                    problem_url_name = file.stem
+                    
+                    # Try reading with different encodings
+                    data = None
+                    for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                        try:
+                            with open(file, 'r', encoding=encoding) as f:
+                                data = f.read()
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    
+                    if data is None:
+                        if self.verbose:
+                            print(f"   ⚠️  Could not decode {file.name}, skipping...")
+                        continue
+                    
+                    xml_data = BeautifulSoup(data, 'xml')
+                    
+                    if problem_url_name in problem_list_data.keys():
+                        if xml_data.find('multiplechoiceresponse') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'Multiple Choice'
+                        elif xml_data.find('choiceresponse') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'Checkboxes'
+                        elif xml_data.find('optionresponse') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'Dropdown'
+                        elif xml_data.find('numericalresponse') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'Numerical Input'
+                        elif xml_data.find('formularesponse') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'Math Input'
+                        elif xml_data.find('customresponse') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'Custom Response'
+                        elif xml_data.find('jsinput') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'JS Input'
+                        elif xml_data.find('coderesponse') is not None:
+                            problem_list_data[problem_url_name]['question type'] = 'Code Response'
+        
+        # Step 3b: Check openassessment folder for ORA details
+        if ora_folderpath.exists() and self.verbose:
+            print('   🔍 Locating openassessment information...')
+        if ora_folderpath.exists():
+            for file in ora_folderpath.iterdir():
+                if file.suffix == '.xml':
+                    ora_url_name = file.stem
+                    
+                    # Try reading with different encodings
+                    data = None
+                    for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                        try:
+                            with open(file, 'r', encoding=encoding) as f:
+                                data = f.read()
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    
+                    if data is None:
+                        if self.verbose:
+                            print(f"   ⚠️  Could not decode {file.name}, skipping...")
+                        continue
+                    
+                    xml_data = BeautifulSoup(data, 'xml')
+                    
+                    # ORA files contain the assessment configuration
+                    # If already in our list, we can add more details
+                    if ora_url_name in problem_list_data.keys():
+                        # Check if it has prompts (indicates it's a real ORA)
+                        if xml_data.find('prompt'):
+                            problem_list_data[ora_url_name]['question type'] = 'Open Response Assessment'
+        
+        # Step 3c: Check word_cloud folder for word cloud details
+        if word_cloud_folderpath.exists() and self.verbose:
+            print('   🔍 Locating word cloud information...')
+        if word_cloud_folderpath.exists():
+            for file in word_cloud_folderpath.iterdir():
+                if file.suffix == '.xml':
+                    wc_url_name = file.stem
+                    
+                    # Try reading with different encodings
+                    data = None
+                    for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                        try:
+                            with open(file, 'r', encoding=encoding) as f:
+                                data = f.read()
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    
+                    if data is None:
+                        if self.verbose:
+                            print(f"   ⚠️  Could not decode {file.name}, skipping...")
+                        continue
+                    
+                    # Word cloud files exist, confirming it's a word cloud
+                    if wc_url_name in problem_list_data.keys():
+                        problem_list_data[wc_url_name]['question type'] = 'Word Cloud'
+        
+        # Step 4: Locate chapter information
+        if c_folderpath.exists() and self.verbose:
+            print('   🔍 Locating chapter information...')
+        if c_folderpath.exists():
+            for file in c_folderpath.iterdir():
+                if file.suffix == '.xml':
+                    # Try reading with different encodings
+                    data = None
+                    for encoding in ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']:
+                        try:
+                            with open(file, 'r', encoding=encoding) as f:
+                                data = f.read()
+                            break
+                        except UnicodeDecodeError:
+                            continue
+                    
+                    if data is None:
+                        if self.verbose:
+                            print(f"   ⚠️  Could not decode {file.name}, skipping...")
+                        continue
+                    
+                    xml_data = BeautifulSoup(data, 'xml')
+                    
+                    sequentials = xml_data.find_all('sequential')
+                    
+                    for sequential in sequentials:
+                        sequential_url_name = sequential.get('url_name')
+                        
+                        for problem in problem_list_data.keys():
+                            if sequential_url_name == problem_list_data[problem].get('sequential'):
+                                problem_list_data[problem]['topic'] = xml_data.find('chapter').get('display_name', 'Unknown')
+        
+        # Step 5: Sort by topic then name (includes both problems and ORA)
+        if self.verbose:
+            print('   📊 Sorting problem/assessment information by topic then name...')
+        
+        def extract_number(s):
+            """Extract first number from string for sorting"""
+            digits = ''.join(x for x in s if x.isdigit())
+            return float(digits) if digits else 0
+        
+        sorted_problems = dict(sorted(
+            problem_list_data.items(),
+            key=lambda item: (
+                extract_number(item[1].get('topic', '')),
+                extract_number(item[1].get('name', ''))
+            )
+        ))
+        
+        return list(sorted_problems.values())
+    
+    def generate_problem_table_html(self, problem_data: List[Dict], course_url: str = None) -> str:
+        """Generate HTML table from problem data
+        
+        Args:
+            problem_data: List of problem dictionaries
+            course_url: Optional Studio base URL with course block for generating clickable links
+                       Example: https://studio.courses.rc.learn.mit.edu/container/block-v1:MITx+Course+2025
+        """
+        if not problem_data:
+            return '<p style="text-align: center; color: #666;">No interactive components found in this course.</p>'
+        
+        # Define headers
+        headers = ['Topic', 'Problem Type', 'Section', 'Video', 'Question Type', 'Name', 'Link']
+        
+        # Start table HTML
+        table_html = '''
+        <table class="problem-table">
+            <thead>
+                <tr>
+        '''
+        
+        for header in headers:
+            table_html += f'<th>{header}</th>'
+        
+        table_html += '''
+                </tr>
+            </thead>
+            <tbody>
+        '''
+        
+        # Add rows
+        for problem in problem_data:
+            table_html += '<tr>'
+            table_html += f'<td>{problem.get("topic", "")}</td>'
+            table_html += f'<td>{problem.get("problem type", "")}</td>'
+            table_html += f'<td>{problem.get("section", "")}</td>'
+            table_html += f'<td>{problem.get("video", "")}</td>'
+            table_html += f'<td>{problem.get("question type", "")}</td>'
+            table_html += f'<td>{problem.get("name", "")}</td>'
+            
+            # Generate link - either clickable URL or just the code
+            link_fragment = problem.get("link", "")
+            vertical_url = problem.get("vertical", "")
+            
+            if course_url and vertical_url:
+                # Studio URL format: https://studio.../container/block-v1:Course+ID+type@vertical+block@{vertical_url}
+                # course_url should be like: https://studio.courses.rc.learn.mit.edu/container/block-v1:MITx+Course+2025
+                full_url = f'{course_url.rstrip("+")}+type@vertical+block@{vertical_url}'
+                table_html += f'<td><a href="{full_url}" target="_blank" class="problem-link" title="Open in Studio">{link_fragment}</a></td>'
+            else:
+                table_html += f'<td><code class="link-code">{link_fragment}</code></td>'
+            
+            table_html += '</tr>'
+        
+        table_html += '''
+            </tbody>
+        </table>
+        '''
+        
+        return table_html
+    
+    def generate_interactive_html(self, structure: Dict, output_file: str = None, course_url: str = None):
+        """Generate an interactive HTML file with expandable/collapsible tree and search
+        
+        Args:
+            structure: Parsed course structure
+            output_file: Output HTML filename (optional)
+            course_url: Studio base URL with course block for generating clickable links (optional)
+                       Example: https://studio.courses.rc.learn.mit.edu/container/block-v1:MITx+Course+2025
+        """
         
         # Auto-generate output filename from source path if not provided
         if output_file is None:
@@ -401,6 +800,14 @@ class InteractiveOLXParser:
         
         # Get component counts
         counts = self.count_components(structure)
+        
+        # Extract problem data (includes problems, ORA, word clouds, iframes, etc.)
+        problem_data = self.extract_problem_data()
+        if self.verbose:
+            print(f"   📊 Extracted {len(problem_data)} interactive components")
+        
+        # Generate problem table HTML
+        problem_table_html = self.generate_problem_table_html(problem_data, course_url)
         
         html_template = r"""
 <!DOCTYPE html>
@@ -524,6 +931,15 @@ class InteractiveOLXParser:
         .tree-content:hover {
             background-color: #e9ecef;
         }
+        .tree-content-link {
+            text-decoration: none;
+            color: inherit;
+            cursor: pointer;
+        }
+        .tree-content-link:hover {
+            background-color: #cfe2ff;
+            box-shadow: 0 0 0 2px #9ec5fe;
+        }
         .tree-children {
             margin-left: 25px;
             border-left: 1px dotted #ccc;
@@ -600,6 +1016,67 @@ class InteractiveOLXParser:
         .xml-toggle:hover, .xml-toggle:focus {
             color: #007bff;
         }
+        .problem-table-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+        .problem-table-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .problem-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+            background: white;
+        }
+        .problem-table thead {
+            background: #007bff;
+            color: white;
+        }
+        .problem-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #dee2e6;
+        }
+        .problem-table td {
+            padding: 10px 12px;
+            border: 1px solid #dee2e6;
+        }
+        .problem-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .problem-table tbody tr:hover {
+            background-color: #e9ecef;
+        }
+        .link-code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #d63384;
+            border: 1px solid #dee2e6;
+        }
+        .problem-link {
+            color: #007bff;
+            text-decoration: none;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            display: inline-block;
+        }
+        .problem-link:hover {
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -633,6 +1110,12 @@ class InteractiveOLXParser:
         
         <div class="tree" id="tree-container">
             {tree_html}
+        </div>
+        
+        <div class="problem-table-section">
+            <h2>📊 Interactive Components Table</h2>
+            <p style="color: #666; font-size: 14px; margin-top: -10px;">Problems, Assessments, Word Clouds, IFrames, and other interactive elements</p>
+            {problem_table_html}
         </div>
     </div>
 
@@ -935,23 +1418,24 @@ class InteractiveOLXParser:
             summary_html += f'<div class="summary-item">{icon} <strong>{count}</strong><br>{comp_type}</div>'
         
         # Generate tree HTML
-        tree_html = self.generate_tree_html(structure)
+        tree_html = self.generate_tree_html(structure, course_url=course_url)
         
         # Get course name for title
         course_title = structure.get('display_name', 'Course') + ' Structure'
         
         # Fill in the template - escape any remaining braces
-        final_html = html_template.replace('{summary_items}', summary_html).replace('{tree_html}', tree_html).replace('{course_title}', course_title)
+        final_html = html_template.replace('{summary_items}', summary_html).replace('{tree_html}', tree_html).replace('{course_title}', course_title).replace('{problem_table_html}', problem_table_html)
         
         # Write to file
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(final_html)
         
         print(f"✅ Interactive HTML with search generated: {output_file}")
-        print(f"   Open this file in your web browser to view the searchable expandable tree!")
+        print(f"   📊 Found {len(problem_data)} interactive components in the course")
+        print(f"   Open this file in your web browser to view the searchable expandable tree and component table!")
     
-    def generate_tree_html(self, node, is_root=True, level=0, node_id_prefix=''):
-        """Generate HTML for tree structure, including collapsible XML string as a sibling to component-url"""
+    def generate_tree_html(self, node, is_root=True, level=0, node_id_prefix='', course_url=None):
+        """Generate HTML for tree structure, including collapsible XML string and clickable Studio links"""
         icon_map = {
             'course': '🎓', 'chapter': '📚', 'sequential': '📄', 
             'vertical': '📝', 'problem': '❓', 'video': '🎥', 
@@ -984,16 +1468,44 @@ class InteractiveOLXParser:
         # Show XML toggle as a span, not a button
         show_xml_btn = f'<span class="xml-toggle" onclick="toggleXml(\'{xml_block_id}\', this)">[show xml]</span>'
         
-        # Create the node content
-        content_html = f'''
-        <div class="tree-node">
-            {toggle_html}{show_xml_btn}
-            <span class="tree-content">
+        # Generate Studio link if course_url is provided
+        studio_url = None
+        if course_url:
+            url_name = node['url_name']
+            node_type = node['type']
+            
+            if node_type == 'course':
+                # Course uses /course/ path instead of /container/
+                # Extract the course ID from course_url: .../container/block-v1:ORG+COURSE+RUN
+                if '/container/block-v1:' in course_url:
+                    course_id = course_url.split('/container/block-v1:')[1]
+                    studio_base = course_url.split('/container/')[0]
+                    studio_url = f'{studio_base}/course/course-v1:{course_id}'
+            elif node_type == 'vertical':
+                # Verticals use /container/ path
+                studio_url = f'{course_url.rstrip("+")}+type@vertical+block@{url_name}'
+        
+        # Create clickable or non-clickable tree content
+        if studio_url:
+            tree_content_html = f'''<a href="{studio_url}" target="_blank" class="tree-content tree-content-link" title="Open in Studio">
                 {icon} 
                 <span class="component-type">[{node['type']}]</span> 
                 <span class="component-name">{node['display_name']}</span> 
                 <span class="component-url">({node['url_name']})</span>
-            </span>
+            </a>'''
+        else:
+            tree_content_html = f'''<span class="tree-content">
+                {icon} 
+                <span class="component-type">[{node['type']}]</span> 
+                <span class="component-name">{node['display_name']}</span> 
+                <span class="component-url">({node['url_name']})</span>
+            </span>'''
+        
+        # Create the node content
+        content_html = f'''
+        <div class="tree-node">
+            {toggle_html}{show_xml_btn}
+            {tree_content_html}
             <span class="component-xml" id="{xml_block_id}" style="display:none; margin-top:4px;">
                 <pre style="white-space:pre-wrap; background:#f8f8f8; border:1px solid #ccc; padding:6px; border-radius:4px;">{xml_string_escaped}</pre>
             </span>
@@ -1006,7 +1518,7 @@ class InteractiveOLXParser:
                 children_class += ' collapsed'
             content_html += f'<div class="{children_class}">'
             for child in children:
-                content_html += self.generate_tree_html(child, False, level+1)
+                content_html += self.generate_tree_html(child, False, level+1, node_id_prefix, course_url)
             content_html += '</div>'
         
         content_html += '</div>'
@@ -1022,14 +1534,25 @@ def main():
     parser.add_argument('olx_path', help='Path to the OLX course directory, zip file, tar.gz file, or tgz file')
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose debug output')
     parser.add_argument('-o', '--output', default=None, help='Output HTML file name (default: <source_name>_structure.html)')
+    parser.add_argument('-c', '--course-id', dest='course_id', default=None, 
+                        help='Course ID for generating clickable Studio links (e.g., MITx+Template.Course+2025)')
+    parser.add_argument('-s', '--studio-url', dest='studio_base_url', default='https://studio.courses.rc.learn.mit.edu',
+                        help='Studio base URL (default: https://studio.courses.rc.learn.mit.edu)')
+    parser.add_argument('-u', '--url', '--course-url', dest='course_url', default=None, 
+                        help='Full Studio URL with course block (alternative to --course-id, e.g., https://studio.courses.rc.learn.mit.edu/container/block-v1:MITx+Course+2025)')
     
     args = parser.parse_args()
+    
+    # Construct course URL from course_id if provided
+    course_url = args.course_url
+    if args.course_id and not course_url:
+        course_url = f'{args.studio_base_url.rstrip("/")}/container/block-v1:{args.course_id}'
     
     try:
         # Use context manager to ensure cleanup
         with InteractiveOLXParser(args.olx_path, verbose=args.verbose) as olx_parser:
             structure = olx_parser.parse_course_structure()
-            olx_parser.generate_interactive_html(structure, args.output)
+            olx_parser.generate_interactive_html(structure, args.output, course_url)
         
     except Exception as e:
         print(f"❌ Error: {e}")

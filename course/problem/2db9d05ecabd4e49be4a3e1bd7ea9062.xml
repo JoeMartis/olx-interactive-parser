@@ -1,0 +1,21 @@
+<problem markdown="null">
+
+ <script type="loncapa/python">
+def test_answer(expect, ans):
+    return True
+</script>
+  
+  <p>What do you think is a teacher’s role in helping students to be successful? 
+ </p>
+   <customresponse cfn="test_answer">
+    <textline size="70" correct_answer="anything" label="Enter Anything"/>
+  </customresponse>
+<solution>
+  <div class="detailed-solution">
+    <p>Explanation</p>
+    <p>For this activity, any response is marked as correct in the edX platform, even a single space.</p>
+  </div>
+</solution>
+  
+
+</problem>

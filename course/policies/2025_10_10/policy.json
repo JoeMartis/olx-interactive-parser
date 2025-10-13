@@ -1,0 +1,61 @@
+{
+    "course/2025_10_10": {
+        "advanced_modules": [
+            "word_cloud"
+        ],
+        "cert_html_view_enabled": true,
+        "certificates_display_behavior": "early_no_info",
+        "discussion_topics": {
+            "General": {
+                "id": "course"
+            }
+        },
+        "discussions_settings": {
+            "enable_graded_units": false,
+            "enable_in_context": true,
+            "provider_type": "legacy",
+            "unit_level_visibility": true
+        },
+        "display_name": "Python Scraper Test",
+        "end": null,
+        "instructor_info": {
+            "instructors": []
+        },
+        "language": "en",
+        "learning_info": [],
+        "start": "2025-01-01T00:00:00Z",
+        "tabs": [
+            {
+                "course_staff_only": false,
+                "name": "Course",
+                "type": "courseware"
+            },
+            {
+                "course_staff_only": false,
+                "name": "Progress",
+                "type": "progress"
+            },
+            {
+                "course_staff_only": false,
+                "name": "Dates",
+                "type": "dates"
+            },
+            {
+                "course_staff_only": false,
+                "name": "Discussion",
+                "type": "discussion"
+            },
+            {
+                "course_staff_only": false,
+                "is_hidden": true,
+                "name": "Wiki",
+                "type": "wiki"
+            },
+            {
+                "course_staff_only": false,
+                "name": "Textbooks",
+                "type": "textbooks"
+            }
+        ]
+    }
+}

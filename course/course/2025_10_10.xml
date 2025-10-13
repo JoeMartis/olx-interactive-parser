@@ -1,0 +1,7 @@
+<course advanced_modules="[&quot;word_cloud&quot;]" cert_html_view_enabled="true" certificates_display_behavior="early_no_info" discussions_settings="{&quot;enable_in_context&quot;: true, &quot;enable_graded_units&quot;: false, &quot;unit_level_visibility&quot;: true, &quot;provider_type&quot;: &quot;legacy&quot;}" display_name="Python Scraper Test" end="null" instructor_info="{&quot;instructors&quot;: []}" language="en" learning_info="[]" start="2025-01-01T00:00:00Z">
+  <chapter url_name="ce4a242f34f54dd39914c8f51f896764"/>
+  <chapter url_name="33844cd6b8594f9a9d4cbaeef28f14e7"/>
+  <chapter url_name="15f1a526c40446a995c673c08506838e"/>
+  <chapter url_name="c5154a565c04436b9fcaf4d937f09371"/>
+  <wiki slug="MITx.Python_Scraper.2025_10_10"/>
+</course>
