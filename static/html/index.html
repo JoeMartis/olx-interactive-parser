@@ -38,7 +38,14 @@
             <input type="text" id="course_id" name="course_id" placeholder="MITx+Template.Course+06_17_2025">
             <div class="help-text">💡 Enter your course ID to make problem links clickable in Studio. Format: Org+Course+Run</div>
             
-            <button type="submit" id="submitBtn">Upload and Parse</button>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" id="submitBtn" style="flex: 1;">Clean and Upload and Parse</button>
+            </div>
+          <hr>
+            <div class="help-text">Use the following button to remove /static and download the file.</div>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" id="cleanBtn" style="flex: 1; background: #28a745;">Clean and Download</button>
+          </div>
           </form>
           
           <div class="progress-container" id="progressContainer">
@@ -52,6 +59,7 @@
           const uploadForm = document.getElementById('uploadForm');
           const fileInput = document.getElementById('olxfile');
           const submitBtn = document.getElementById('submitBtn');
+          const cleanBtn = document.getElementById('cleanBtn');
           const progressContainer = document.getElementById('progressContainer');
           const progressFill = document.getElementById('progressFill');
           const progressText = document.getElementById('progressText');
@@ -64,14 +72,16 @@
           function showProgress() {
             progressContainer.style.display = 'block';
             submitBtn.disabled = true;
+            cleanBtn.disabled = true;
           }
 
           function hideProgress() {
             progressContainer.style.display = 'none';
             submitBtn.disabled = false;
+            cleanBtn.disabled = false;
           }
 
-          // Helper to convert tar.gz to clean tar.gz
+          // Helper to convert tar.gz to clean tar.gz using a simpler approach
           async function cleanTarGz(file) {
             if (typeof pako === 'undefined') {
               throw new Error('Compression library not loaded. Please refresh the page.');
@@ -89,8 +99,8 @@
             
             updateProgress(50, 'Filtering out /static directory...');
             
-            // Parse tar and filter
-            const filteredEntries = [];
+            // Simple approach: create a new tar by copying blocks, skipping static entries
+            const newTarBlocks = [];
             let offset = 0;
             
             while (offset < decompressed.length) {
@@ -103,15 +113,25 @@
               const sizeStr = new TextDecoder().decode(sizeBytes).trim().replace(/\0/g, '');
               const size = parseInt(sizeStr, 8) || 0;
               
-              const header = decompressed.slice(offset, offset + 512);
+              // Handle PAX extended attributes (files starting with ././@PaxHeader)
+              if (name.startsWith('././@PaxHeader') || name.includes('@PaxHeader')) {
+                // Skip PAX headers to avoid malformed attribute warnings
+                const dataStart = offset + 512;
+                const dataEnd = dataStart + size;
+                const paddedEnd = dataEnd + (512 - (size % 512)) % 512;
+                offset = paddedEnd;
+                continue;
+              }
+              
               const dataStart = offset + 512;
               const dataEnd = dataStart + size;
               const paddedEnd = dataEnd + (512 - (size % 512)) % 512;
               
               // Skip /static directory and its contents
               if (!name.includes('/static/') && !name.endsWith('/static')) {
-                const data = decompressed.slice(dataStart, dataEnd);
-                filteredEntries.push({ header, data, size });
+                // Copy the entire block (header + data + padding)
+                const block = decompressed.slice(offset, paddedEnd);
+                newTarBlocks.push(block);
               }
               
               offset = paddedEnd;
@@ -119,21 +139,25 @@
             
             updateProgress(70, 'Rebuilding tar archive...');
             
-            // Rebuild tar
-            const totalSize = filteredEntries.reduce((sum, entry) => 
-              sum + 512 + entry.size + (512 - (entry.size % 512)) % 512, 0) + 1024;
+            // Calculate total size
+            let totalSize = 0;
+            for (const block of newTarBlocks) {
+              totalSize += block.length;
+            }
+            totalSize += 1024; // Add end-of-archive markers
             
+            // Create new tar
             const newTar = new Uint8Array(totalSize);
             let writeOffset = 0;
             
-            for (const entry of filteredEntries) {
-              newTar.set(entry.header, writeOffset);
-              writeOffset += 512;
-              newTar.set(entry.data, writeOffset);
-              writeOffset += entry.size;
-              const padding = (512 - (entry.size % 512)) % 512;
-              writeOffset += padding;
+            // Copy all blocks
+            for (const block of newTarBlocks) {
+              newTar.set(block, writeOffset);
+              writeOffset += block.length;
             }
+            
+            // Add end-of-archive markers (two blocks of zeros)
+            writeOffset += 1024;
             
             updateProgress(85, 'Compressing...');
             
@@ -220,6 +244,60 @@
               }
             } catch (error) {
               alert('Upload error: ' + error.message);
+              hideProgress();
+            }
+          });
+
+          // Clean and Download button handler
+          cleanBtn.addEventListener('click', async function() {
+            if (!fileInput.files.length) {
+              alert('Please select a file');
+              return;
+            }
+            
+            let file = fileInput.files[0];
+            const originalSize = file.size;
+            
+            // Check if it's a tar.gz file
+            const isTarGz = file.name.endsWith('.tar.gz') || file.name.endsWith('.tgz');
+            
+            if (!isTarGz) {
+              alert('Clean and Download only works with .tar.gz and .tgz files.');
+              return;
+            }
+            
+            showProgress();
+            
+            try {
+              // Clean the file
+              file = await cleanTarGz(file);
+              const newSize = file.size;
+              const savedMB = ((originalSize - newSize) / 1024 / 1024).toFixed(2);
+              
+              updateProgress(100, `Cleaned! Removed ${savedMB}MB`);
+              
+              // Wait a bit to show the success message
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              // Download the cleaned file
+              const url = window.URL.createObjectURL(file);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = file.name.replace('.tar.gz', '_cleaned.tar.gz').replace('.tgz', '_cleaned.tgz');
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              window.URL.revokeObjectURL(url);
+              
+              hideProgress();
+              
+            } catch (error) {
+              console.error('Error cleaning file:', error);
+              if (error.message.includes('not loaded')) {
+                alert('Compression library failed to load. Please refresh the page and try again.');
+              } else {
+                alert('Error processing file: ' + error.message);
+              }
               hideProgress();
             }
           });
