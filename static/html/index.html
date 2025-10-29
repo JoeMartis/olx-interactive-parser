@@ -26,6 +26,9 @@
 <body>
     <div class="container">
         <h1>OLX Interactive Parser</h1>
+        <p style="text-align: center; margin-bottom: 20px;">
+            <a href="/cleaner" style="color: #007bff; text-decoration: none; font-weight: bold; padding: 8px 16px; border: 2px solid #007bff; border-radius: 4px; display: inline-block;">🧹 HTML Style Cleaner</a>
+        </p>
         <p style="color:#b94a48; font-weight:bold; margin-top:1em;">
             🚨 Files must be under <strong>5MB</strong> after processing.<br>
             <em>✨ <strong>Good news!</strong> If your OLX has a bloated <code>/static/</code> folder, we'll automatically remove it <strong>in your browser</strong> before uploading. A 1GB file can shrink to 1MB! No more manual cleanup needed.</em>
@@ -35,8 +38,12 @@
             <input type="file" id="olxfile" name="olxfile" required>
             
             <label for="course_id">Course ID (Optional)</label>
-            <input type="text" id="course_id" name="course_id" placeholder="MITx+Template.Course+06_17_2025">
+            <input type="text" id="course_id" name="course_id" placeholder="MITx+Template.Course+06_17_2025" value="MITx+Template.Course+06_17_2025">
             <div class="help-text">💡 Enter your course ID to make problem links clickable in Studio. Format: Org+Course+Run</div>
+            
+            <label for="studio_base_url">Studio Base URL (Optional)</label>
+            <input type="text" id="studio_base_url" name="studio_base_url" placeholder="https://studio.courses.rc.learn.mit.edu" value="https://studio.courses.rc.learn.mit.edu">
+            <div class="help-text">💡 Base URL for your Studio instance (e.g., https://studio.courses.rc.learn.mit.edu)</div>
             
             <div style="display: flex; gap: 10px;">
                 <button type="submit" id="submitBtn" style="flex: 1;">Clean and Upload and Parse</button>
@@ -222,6 +229,7 @@
             const formData = new FormData();
             formData.append('olxfile', file);
             formData.append('course_id', document.getElementById('course_id').value);
+            formData.append('studio_base_url', document.getElementById('studio_base_url').value);
             
             if (!isTarGz) {
               updateProgress(50, 'Uploading...');

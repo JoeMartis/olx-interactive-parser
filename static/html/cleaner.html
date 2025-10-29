@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open edX HTML Style Cleaner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+        
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .control-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .control-group input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px 40px;
+            font-size: 20px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            min-height: 700px;
+        }
+        
+        .panel {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .panel-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 2px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .panel-left {
+            border-right: 1px solid #dee2e6;
+        }
+        
+        .panel-left .panel-header {
+            background: #fff3cd;
+        }
+        
+        .panel-right .panel-header {
+            background: #d4edda;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            border: none;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            flex: 1;
+        }
+        
+        .preview-container {
+            padding: 20px;
+            overflow-y: auto;
+            height: 800px;
+            background: white;
+        }
+        
+        .preview-content {
+            max-width: 100%;
+            word-wrap: break-word;
+        }
+        
+        .stats {
+            padding: 20px;
+            background: #e9ecef;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .tab-btn {
+            padding: 6px 12px;
+            background: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn.active {
+            background: white;
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .help-text {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #0c5460;
+        }
+        
+        .help-text h3 {
+            margin-bottom: 10px;
+        }
+        
+        .help-text ul {
+            margin-left: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .panel-left {
+                border-right: none;
+                border-bottom: 2px solid #dee2e6;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+        
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .diff-added {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .diff-removed {
+            background-color: #f8d7da;
+            color: #721c24;
+            text-decoration: line-through;
+        }
+        
+        .header a {
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 15px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+        
+        .header a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="/">← Back to OLX Parser</a>
+            <h1>🧹 Open edX HTML Style Cleaner</h1>
+            <p>Remove unwanted inline styles and unnecessary span tags from your course content</p>
+        </div>
+        
+        <div class="controls">
+            <div class="help-text">
+                <h3>ℹ️ How to use:</h3>
+                <ul>
+                    <li>Paste your HTML content with inline styles in the left panel (supports Microsoft Word paste)</li>
+                    <li>Click "Clean HTML" to process the content</li>
+                    <li>The cleaned HTML appears on the right</li>
+                    <li>Switch between HTML and Preview views to see the results</li>
+                    <li>Customize which styles to keep or remove using the options below</li>
+                </ul>
+            </div>
+            
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="removeAllStyles" checked>
+                    Remove all inline styles
+                </label>
+                <label>
+                    <input type="checkbox" id="removeSpans" checked>
+                    Remove unnecessary &lt;span&gt; tags
+                </label>
+                <label>
+                    <input type="checkbox" id="removeEmpty" checked>
+                    Remove empty tags
+                </label>
+                <label>
+                    <input type="checkbox" id="removeNbsp" checked>
+                    Remove unnecessary &amp;nbsp;
+                </label>
+                <label>
+                    <input type="checkbox" id="removePFromLi" checked>
+                    Remove &lt;p&gt; tags within &lt;li&gt;
+                </label>
+            </div>
+            
+            <div class="control-group">
+                <label for="preserveStyles">Preserve these styles (comma-separated):</label>
+                <input type="text" id="preserveStyles" placeholder="e.g., width, height, text-align">
+            </div>
+            
+            <div class="control-group">
+                <label for="preserveTags">Keep all styles in these tags (comma-separated):</label>
+                <input type="text" id="preserveTags" value="table, td, th, img, iframe, video" placeholder="e.g., table, img, iframe">
+            </div>
+            
+            <div class="button-group">
+                <button class="btn-primary" onclick="cleanHTML()">🧹 Clean HTML</button>
+                <button class="btn-secondary" onclick="loadSample()">📝 Load Sample</button>
+                <button class="btn-secondary" onclick="clearAll()">🗑️ Clear All</button>
+                <button class="btn-success" onclick="copyClean()">📋 Copy Clean HTML</button>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="panel panel-left">
+                <div class="panel-header">
+                    <div class="panel-title">Original HTML</div>
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" onclick="switchView('left', 'html', this)">HTML</button>
+                        <button class="tab-btn" onclick="switchView('left', 'preview', this)">Preview</button>
+                    </div>
+                </div>
+                <textarea id="inputHTML" placeholder="Paste your HTML content here..."></textarea>
+                <div class="preview-container" id="leftPreview" style="display: none;">
+                    <div class="preview-content" id="leftPreviewContent"></div>
+                </div>
+                <div class="loading" id="leftLoading">Processing...</div>
+            </div>
+            
+            <div class="panel panel-right">
+                <div class="panel-header">
+                    <div class="panel-title">Cleaned HTML</div>
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" onclick="switchView('right', 'html', this)">HTML</button>
+                        <button class="tab-btn" onclick="switchView('right', 'preview', this)">Preview</button>
+                    </div>
+                </div>
+                <textarea id="outputHTML" placeholder="Cleaned HTML will appear here..." readonly></textarea>
+                <div class="preview-container" id="rightPreview" style="display: none;">
+                    <div class="preview-content" id="rightPreviewContent"></div>
+                </div>
+                <div class="loading" id="rightLoading">Cleaning...</div>
+            </div>
+        </div>
+        
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="stylesRemoved">0</div>
+                    <div class="stat-label">Styles Removed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="spansRemoved">0</div>
+                    <div class="stat-label">Spans Removed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="emptyRemoved">0</div>
+                    <div class="stat-label">Empty Tags Removed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="nbspRemoved">0</div>
+                    <div class="stat-label">&amp;nbsp; Removed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="sizeReduction">0%</div>
+                    <div class="stat-label">Size Reduction</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let stats = {
+            stylesRemoved: 0,
+            spansRemoved: 0,
+            emptyRemoved: 0,
+            nbspRemoved: 0,
+            originalSize: 0,
+            cleanedSize: 0
+        };
+        
+        function cleanHTML() {
+            const input = document.getElementById('inputHTML').value;
+            if (!input.trim()) {
+                alert('Please paste some HTML content to clean');
+                return;
+            }
+            
+            // Reset stats
+            stats = {
+                stylesRemoved: 0,
+                spansRemoved: 0,
+                emptyRemoved: 0,
+                nbspRemoved: 0,
+                originalSize: input.length,
+                cleanedSize: 0
+            };
+            
+            // Get options
+            const removeAllStyles = document.getElementById('removeAllStyles').checked;
+            const removeSpans = document.getElementById('removeSpans').checked;
+            const removeEmpty = document.getElementById('removeEmpty').checked;
+            const preserveStyles = document.getElementById('preserveStyles').value
+                .split(',')
+                .map(s => s.trim())
+                .filter(s => s);
+            const preserveTags = document.getElementById('preserveTags').value
+                .split(',')
+                .map(s => s.trim().toLowerCase())
+                .filter(s => s);
+            
+            // Parse HTML
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(input, 'text/html');
+            
+            // Process all elements with style attributes
+            if (removeAllStyles) {
+                const elementsWithStyle = doc.querySelectorAll('[style]');
+                elementsWithStyle.forEach(element => {
+                    // Check if this tag should have its styles preserved
+                    if (preserveTags.includes(element.tagName.toLowerCase())) {
+                        return;
+                    }
+                    
+                    const oldStyle = element.getAttribute('style');
+                    
+                    if (preserveStyles.length > 0) {
+                        // Parse and filter styles
+                        const styles = parseStyles(oldStyle);
+                        const filteredStyles = {};
+                        
+                        for (const [prop, value] of Object.entries(styles)) {
+                            if (preserveStyles.some(p => prop.includes(p))) {
+                                filteredStyles[prop] = value;
+                            }
+                        }
+                        
+                        if (Object.keys(filteredStyles).length > 0) {
+                            const newStyle = Object.entries(filteredStyles)
+                                .map(([k, v]) => `${k}: ${v}`)
+                                .join('; ');
+                            element.setAttribute('style', newStyle);
+                        } else {
+                            element.removeAttribute('style');
+                            stats.stylesRemoved++;
+                        }
+                    } else {
+                        element.removeAttribute('style');
+                        stats.stylesRemoved++;
+                    }
+                });
+            }
+            
+            // Remove unnecessary attributes from all elements
+            const allElements = doc.querySelectorAll('*');
+            allElements.forEach(element => {
+                const tagName = element.tagName.toLowerCase();
+                const preserveClassTags = ['table', 'td', 'th', 'img', 'iframe', 'video'];
+                
+                // Get all attributes to remove
+                const attrsToRemove = [];
+                
+                Array.from(element.attributes).forEach(attr => {
+                    const attrName = attr.name.toLowerCase();
+                    
+                    // Remove ALL data-* attributes
+                    if (attrName.startsWith('data-')) {
+                        attrsToRemove.push(attr.name);
+                    }
+                    
+                    // Remove Word namespace attributes (o:, w:, v:, m:)
+                    else if (attrName.startsWith('o:') || 
+                             attrName.startsWith('w:') || 
+                             attrName.startsWith('v:') || 
+                             attrName.startsWith('m:')) {
+                        attrsToRemove.push(attr.name);
+                    }
+                    
+                    // Remove language attributes
+                    else if (attrName === 'lang' || attrName === 'xml:lang') {
+                        attrsToRemove.push(attr.name);
+                    }
+                    
+                    // Remove accessibility/interaction attributes
+                    else if (attrName === 'aria-hidden' || 
+                             attrName === 'tabindex' || 
+                             attrName === 'dir' || 
+                             attrName === 'role') {
+                        attrsToRemove.push(attr.name);
+                    }
+                    
+                    // Remove class attribute (except on specific tags)
+                    else if (attrName === 'class' && !preserveClassTags.includes(tagName)) {
+                        attrsToRemove.push(attr.name);
+                    }
+                });
+                
+                // Remove all marked attributes
+                attrsToRemove.forEach(attrName => {
+                    element.removeAttribute(attrName);
+                });
+            });
+            
+            // Process span tags
+            if (removeSpans) {
+                const spans = doc.querySelectorAll('span');
+                const spansToRemove = [];
+                
+                spans.forEach(span => {
+                    // Keep spans with class, id, or data attributes
+                    if (span.id || span.className || 
+                        Array.from(span.attributes).some(attr => attr.name.startsWith('data-'))) {
+                        return;
+                    }
+                    
+                    // Mark for removal
+                    spansToRemove.push(span);
+                });
+                
+                // Remove spans while preserving their content
+                spansToRemove.forEach(span => {
+                    while (span.firstChild) {
+                        span.parentNode.insertBefore(span.firstChild, span);
+                    }
+                    span.parentNode.removeChild(span);
+                    stats.spansRemoved++;
+                });
+            }
+            
+            // Remove Microsoft Word specific tags (o:p, etc.)
+            // These have namespace prefixes that need special handling
+            const allElements2 = doc.querySelectorAll('*');
+            const wordTagsToRemove = [];
+            
+            allElements2.forEach(element => {
+                const tagName = element.tagName.toLowerCase();
+                // Check if it's a Word-specific tag
+                if (tagName.startsWith('o:') || 
+                    tagName.startsWith('w:') || 
+                    tagName.startsWith('v:') || 
+                    tagName.startsWith('m:')) {
+                    wordTagsToRemove.push(element);
+                }
+            });
+            
+            // Remove Word tags while preserving their text content
+            wordTagsToRemove.forEach(element => {
+                while (element.firstChild) {
+                    element.parentNode.insertBefore(element.firstChild, element);
+                }
+                if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                }
+            });
+            
+            // Remove empty tags
+            if (removeEmpty) {
+                ['p', 'div', 'span', 'strong', 'em', 'i', 'b'].forEach(tagName => {
+                    const elements = doc.querySelectorAll(tagName);
+                    const elementsToRemove = [];
+                    
+                    elements.forEach(element => {
+                        // Check if truly empty (no text content and no important children)
+                        const text = element.textContent.trim();
+                        const hasImportantChildren = element.querySelector('img, br, hr, input, iframe, video, audio');
+                        
+                        if (!text && !hasImportantChildren) {
+                            elementsToRemove.push(element);
+                        }
+                    });
+                    
+                    elementsToRemove.forEach(element => {
+                        element.parentNode.removeChild(element);
+                        stats.emptyRemoved++;
+                    });
+                });
+            }
+            
+            // Remove <p> tags from within <li> elements
+            const removePFromLi = document.getElementById('removePFromLi').checked;
+            if (removePFromLi) {
+                const listItems = doc.querySelectorAll('li');
+                listItems.forEach(li => {
+                    const pTags = li.querySelectorAll('p');
+                    pTags.forEach(p => {
+                        // Move all children of p to its parent (the li)
+                        while (p.firstChild) {
+                            li.insertBefore(p.firstChild, p);
+                        }
+                        // Remove the now-empty p tag
+                        p.parentNode.removeChild(p);
+                    });
+                });
+            }
+            
+            // Remove unnecessary wrapper divs and article tags
+            // Unwrap divs and articles that are just containers with no meaningful attributes left
+            const wrapperTags = ['div', 'article'];
+            wrapperTags.forEach(tagName => {
+                const elements = doc.querySelectorAll(tagName);
+                const elementsToUnwrap = [];
+                
+                elements.forEach(element => {
+                    // Check if element has any remaining attributes (id, style, etc.)
+                    // If it has no attributes and is just a wrapper, mark for unwrapping
+                    if (element.attributes.length === 0) {
+                        elementsToUnwrap.push(element);
+                    }
+                });
+                
+                // Unwrap elements (move children up and remove wrapper)
+                elementsToUnwrap.forEach(element => {
+                    const parent = element.parentNode;
+                    if (parent) {
+                        while (element.firstChild) {
+                            parent.insertBefore(element.firstChild, element);
+                        }
+                        parent.removeChild(element);
+                    }
+                });
+            });
+            
+            // First, remove obviously empty p tags before wrapping
+            const emptyPs = doc.querySelectorAll('p');
+            emptyPs.forEach(p => {
+                const text = p.textContent.trim();
+                const hasImportantChildren = p.querySelector('img, br, hr, input, iframe, video, audio, strong, em, b, i');
+                if (text === '' && !hasImportantChildren) {
+                    if (p.parentNode) {
+                        p.parentNode.removeChild(p);
+                    }
+                }
+            });
+            
+            // Trim excessive whitespace inside text elements
+            const textElements = doc.querySelectorAll('p, li, h1, h2, h3, h4, h5, h6, td, th');
+            textElements.forEach(element => {
+                // Get all child nodes
+                Array.from(element.childNodes).forEach(node => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        // Replace multiple spaces with single space
+                        node.textContent = node.textContent.replace(/\s+/g, ' ');
+                        // Trim leading/trailing whitespace
+                        if (node === element.firstChild) {
+                            node.textContent = node.textContent.trimStart();
+                        }
+                        if (node === element.lastChild) {
+                            node.textContent = node.textContent.trimEnd();
+                        }
+                    }
+                });
+            });
+            
+            // NOW wrap orphaned text and inline elements in <p> tags
+            // This handles text nodes and inline elements that aren't in block elements
+            function wrapOrphanedContent(parentElement) {
+                const children = Array.from(parentElement.childNodes);
+                const blockElements = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'blockquote', 'pre', 'table', 'hr', 'article'];
+                const inlineElements = ['strong', 'em', 'span', 'a', 'code', 'b', 'i', 'u'];
+                
+                let currentGroup = [];
+                const groupsToWrap = [];
+                
+                children.forEach((node) => {
+                    const isBlockElement = node.nodeType === Node.ELEMENT_NODE && 
+                                      blockElements.includes(node.tagName.toLowerCase());
+                    const isInlineElement = node.nodeType === Node.ELEMENT_NODE && 
+                                           inlineElements.includes(node.tagName.toLowerCase());
+                    const isTextNode = node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0;
+                    
+                    if (isTextNode || isInlineElement) {
+                        // Add to current group
+                        currentGroup.push(node);
+                    } else {
+                        // End current group if it has content
+                        if (currentGroup.length > 0) {
+                            groupsToWrap.push([...currentGroup]);
+                            currentGroup = [];
+                        }
+                    }
+                });
+                
+                // Don't forget the last group
+                if (currentGroup.length > 0) {
+                    groupsToWrap.push(currentGroup);
+                }
+                
+                // Wrap each group in a <p> tag
+                groupsToWrap.forEach(group => {
+                    const p = doc.createElement('p');
+                    group.forEach(node => {
+                        p.appendChild(node.cloneNode(true));
+                    });
+                    // Insert the new <p> before the first node in the group
+                    if (group[0].parentNode) {
+                        group[0].parentNode.insertBefore(p, group[0]);
+                        // Remove the original nodes
+                        group.forEach(node => {
+                            if (node.parentNode) {
+                                node.parentNode.removeChild(node);
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // Apply to body
+            wrapOrphanedContent(doc.body);
+            
+            // Get cleaned HTML
+            let cleaned = doc.body.innerHTML;
+            
+            // If the input was a fragment (not a full document), use it as-is
+            // Otherwise, try to extract just the body content
+            if (!input.trim().toLowerCase().startsWith('<!doctype') && 
+                !input.trim().toLowerCase().startsWith('<html')) {
+                cleaned = doc.body.innerHTML;
+            }
+            
+            // Remove unnecessary &nbsp; entities (do this AFTER getting the HTML string)
+            const removeNbsp = document.getElementById('removeNbsp').checked;
+            if (removeNbsp) {
+                // Count occurrences before removal
+                const nbspCount = (cleaned.match(/&nbsp;/g) || []).length;
+                
+                // Replace multiple consecutive &nbsp; with single space
+                cleaned = cleaned.replace(/(&nbsp;)+/g, ' ');
+                
+                // Count how many were removed
+                const remainingNbsp = (cleaned.match(/&nbsp;/g) || []).length;
+                stats.nbspRemoved = nbspCount - remainingNbsp;
+            }
+            
+            // Final cleanup: remove empty <p> tags from the HTML string
+            cleaned = cleaned.replace(/<p>\s*<\/p>/g, '');
+            cleaned = cleaned.replace(/<p><\/p>/g, '');
+            
+            stats.cleanedSize = cleaned.length;
+            
+            // Display results
+            document.getElementById('outputHTML').value = cleaned;
+            
+            // Update previews
+            updatePreview('left', input);
+            updatePreview('right', cleaned);
+            
+            // Show stats
+            displayStats();
+        }
+        
+        function parseStyles(styleString) {
+            const styles = {};
+            if (!styleString) return styles;
+            
+            styleString.split(';').forEach(rule => {
+                if (rule.includes(':')) {
+                    const [prop, value] = rule.split(':').map(s => s.trim());
+                    if (prop && value) {
+                        styles[prop] = value;
+                    }
+                }
+            });
+            
+            return styles;
+        }
+        
+        function updatePreview(side, html) {
+            const previewId = side === 'left' ? 'leftPreviewContent' : 'rightPreviewContent';
+            const preview = document.getElementById(previewId);
+            
+            // Create sandboxed iframe for safe preview
+            const iframe = document.createElement('iframe');
+            iframe.style.width = '100%';
+            iframe.style.height = '800px';
+            iframe.style.border = 'none';
+            iframe.sandbox = 'allow-same-origin';
+            
+            preview.innerHTML = '';
+            preview.appendChild(iframe);
+            
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            iframeDoc.open();
+            iframeDoc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                            line-height: 1.6;
+                            color: #333;
+                            padding: 10px;
+                            margin: 0;
+                        }
+                    </style>
+                </head>
+                <body>${html}</body>
+                </html>
+            `);
+            iframeDoc.close();
+        }
+        
+        function displayStats() {
+            const statsDiv = document.getElementById('stats');
+            statsDiv.style.display = 'block';
+            
+            document.getElementById('stylesRemoved').textContent = stats.stylesRemoved;
+            document.getElementById('spansRemoved').textContent = stats.spansRemoved;
+            document.getElementById('emptyRemoved').textContent = stats.emptyRemoved;
+            document.getElementById('nbspRemoved').textContent = stats.nbspRemoved;
+            
+            const reduction = Math.round((1 - stats.cleanedSize / stats.originalSize) * 100);
+            document.getElementById('sizeReduction').textContent = reduction + '%';
+        }
+        
+        function switchView(panel, view, button) {
+            const isLeft = panel === 'left';
+            const textareaId = isLeft ? 'inputHTML' : 'outputHTML';
+            const previewId = isLeft ? 'leftPreview' : 'rightPreview';
+            
+            const textarea = document.getElementById(textareaId);
+            const preview = document.getElementById(previewId);
+            
+            // Update button states
+            button.parentElement.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+            
+            if (view === 'html') {
+                textarea.style.display = 'block';
+                preview.style.display = 'none';
+            } else {
+                textarea.style.display = 'none';
+                preview.style.display = 'block';
+                
+                // Update preview content
+                const content = textarea.value;
+                if (content) {
+                    updatePreview(panel, content);
+                }
+            }
+        }
+        
+        function loadSample() {
+            const sample = `<p style="text-rendering: optimizelegibility; margin-top: 0px; margin-right: 0px; margin-left: 0px; padding: 0px; border: 0px; outline: 0px; font-variant-numeric: inherit; font-variant-east-asian: inherit; font-variant-alternates: inherit; font-variant-position: inherit; font-variant-emoji: inherit; font-stretch: inherit; font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; font-size: 16px; vertical-align: baseline; color: #313131;"><strong>Learning Objectives</strong></p>
+<p style="text-rendering: optimizelegibility; margin-top: 0px; margin-right: 0px; margin-left: 0px; padding: 0px; border: 0px; outline: 0px; font-variant-numeric: inherit; font-variant-east-asian: inherit; font-variant-alternates: inherit; font-variant-position: inherit; font-variant-emoji: inherit; font-stretch: inherit; font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; font-size: 16px; vertical-align: baseline; color: #313131;">By the end of this lecture, learners will be able to:</p>
+<ul style="text-rendering: optimizelegibility; border: 0px; outline: 0px; font-variant-numeric: inherit; font-variant-east-asian: inherit; font-variant-alternates: inherit; font-variant-position: inherit; font-variant-emoji: inherit; font-stretch: inherit; line-height: 1.4em; font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; vertical-align: baseline; color: #313131;">
+    <li style="text-rendering: optimizelegibility; margin-top: 0px; margin-right: 0px; margin-left: 0px; padding: 0px; border: 0px; outline: 0px; font-style: inherit; font-variant: inherit; font-weight: inherit; font-stretch: inherit; line-height: 1.4em; font-family: inherit; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; vertical-align: baseline;"><span style="text-rendering: optimizelegibility; margin: 0px; padding: 0px; border: 0px; outline: 0px; font-style: inherit; font-variant: inherit; font-weight: inherit; font-stretch: inherit; line-height: 1.4em; font-family: inherit; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; vertical-align: baseline;"><strong>Explain</strong> how multi-objective optimization works</span></li>
+    <li style="text-rendering: optimizelegibility; margin-top: 0px; margin-right: 0px; margin-left: 0px; padding: 0px; border: 0px; outline: 0px; font-style: inherit; font-variant: inherit; font-weight: inherit; font-stretch: inherit; line-height: 1.4em; font-family: inherit; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; vertical-align: baseline;"><strong>Formulate</strong> facility location problems</li>
+</ul>
+<p></p>`;
+            document.getElementById('inputHTML').value = sample;
+        }
+        
+        function clearAll() {
+            document.getElementById('inputHTML').value = '';
+            document.getElementById('outputHTML').value = '';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('leftPreviewContent').innerHTML = '';
+            document.getElementById('rightPreviewContent').innerHTML = '';
+        }
+        
+        function copyClean() {
+            const output = document.getElementById('outputHTML');
+            if (!output.value) {
+                alert('No cleaned HTML to copy. Please clean some HTML first.');
+                return;
+            }
+            
+            output.select();
+            output.setSelectionRange(0, 99999); // For mobile devices
+            
+            try {
+                document.execCommand('copy');
+                
+                // Visual feedback
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                button.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy. Please select the text manually and copy.');
+            }
+        }
+        
+        // Auto-clean when pasting
+        document.getElementById('inputHTML').addEventListener('paste', function(e) {
+            setTimeout(() => {
+                if (confirm('Would you like to clean this HTML now?')) {
+                    cleanHTML();
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

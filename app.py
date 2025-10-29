@@ -12,6 +12,11 @@ def index():
     # Serve index.html from static/html/
     return send_from_directory('static/html', 'index.html')
 
+@app.route('/cleaner')
+def cleaner():
+    # Serve cleaner.html from static/html/
+    return send_from_directory('static/html', 'cleaner.html')
+
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files.get('olxfile')
@@ -55,4 +60,4 @@ def page_not_found(e):
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=True, port=5000) 
